@@ -26,22 +26,45 @@ void player_win(int player); //1 2
 
 /*---------ЛОГИКА---------*/
 
-int logic(char command, int *ball_x, int *ball_y, int *ball_vector_x, int *ball_vector_y, int *p1_racket, int *p2_racket, int *player_1_score, int *player_2_score, int *restart);
-int logic_ball(int *ball_x, int *ball_y, int *ball_vector_x, int *ball_vector_y, int *p1_racket, int *p2_racket, int *player_1_score, int *player_2_score);
-int logic_racket(char command, int *p1_racket, int *p2_racket);
+int racket_move(int p1_racket, int p2_racket, char input_char);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*------------------------------------MAIN------------------------------------*/
 
 int main() {
 
+    /*------------------------------------------------------------------------*/
+
     /*---------СЧЕТ---------*/
     int player_1_score = 20;
-    int player_2_score = 19;
-    int restart = 0;
+    int player_2_score = 20;
+
     /*---------МЯЧ----------*/
 
-    int ball_vector_x = 0; // 0 - влево 1 - вправо
-    int ball_vector_y = 0; // 0 - вниз 1 - вверх
+    int ball_vector_x = -1; // -1 - влево 1 - вправо
+    int ball_vector_y = 1; // -1 - вниз 1 - вверх
     
 
    int ball_x = SIZE_X / 2;
@@ -52,75 +75,137 @@ int main() {
    int p1_racket = SIZE_Y / 2; 
    int p2_racket = SIZE_Y / 2; 
 
-   char command = 0;
+   char move = 0;
+
+    /*------------------------------------------------------------------------*/
+
+
+
 
     draw(ball_x, ball_y, p1_racket, p2_racket, player_1_score, player_2_score );
 
-    while(scanf("%c", &command) && player_1_score < 21 && player_2_score < 21) {
+    while(scanf("%c", &move) && player_1_score < 21 && player_2_score < 21) {
+        if (move != '\n') {        //чтобы нажатие Enter не считалось за действие
+        int move_res = racket_move(p1_racket, p2_racket, move);  //записываем в переменную move_res новую позицию ракетки
+    if ((move == 'a' || move == 'z') &&
+       move_res != 0)  //проверка на корректный ввод. Переменная не может равняться 0, тк
+                      //учитывается верхняя граница поля
+    {
+       p1_racket = move_res;
+   }
+  if ((move == 'm' || move == 'k') && move_res != 0) {
+      p2_racket = move_res;
+  }
 
-        
-        logic(command, &ball_x, &ball_y, &ball_vector_x, &ball_vector_y, &p1_racket, &p2_racket, &player_1_score, &player_2_score, &restart);
-        draw(ball_x, ball_y, p1_racket, p2_racket, player_1_score, player_2_score );
+    if (ball_x == 0) {  //если мячик проходит за ракетку по левому краю
+        player_2_score = player_2_score + 1;  // прибавь очко
+        p1_racket = SIZE_Y / 2;
+        p2_racket = SIZE_Y / 2;
+        ball_x = 0;  //мячик ставим перед ракеткой
+        ball_y = SIZE_Y / 2 - 1;
+        ball_vector_x = 1;  //вектора обнуляются
+        ball_vector_y = 1;
+      }
+
+     if (ball_x == SIZE_X - 1) {
+        player_1_score = player_1_score + 1;  //тоже самое для правого края
+        p1_racket = SIZE_Y / 2;
+        p2_racket = SIZE_Y / 2;
+        ball_x = SIZE_X - 1;
+        ball_y = SIZE_Y / 2 + 1;
+        ball_vector_x = -1;
+        ball_vector_y = -1;
+     }
+
+     if ((ball_x == 0) && (ball_vector_x == -1) && ((ball_y == p1_racket) || (ball_y == p1_racket - 1) || (ball_y == p1_racket + 1))) {  //если мячик отбивается
+                ball_vector_x = ball_vector_x * -1;
     }
+     if ((ball_x == SIZE_X - 1) && (ball_vector_x == 1) && ((ball_y == p2_racket) || (ball_y == p2_racket - 1) || (ball_y == p2_racket - 2))) {
+         ball_vector_x = ball_vector_x * -1;  //поменяй вектор
+     }
+
+     if (ball_y == SIZE_Y - 1) {  //если ударилось об нижнее поле
+         ball_vector_y = -1;
+     }
+     if (ball_y == 0) {  //если ударилось об верхнее
+        ball_vector_y = 1;
+     }
+
+     ball_x = ball_x + ball_vector_x;  // двигаем мячик на 1 по 2 направлениям
+     ball_y = ball_y + ball_vector_y;
+
+  
+  }
+   draw(ball_x, ball_y, p1_racket, p2_racket, player_1_score, player_2_score );
+}
+        
+        // logic(command, &ball_x, &ball_y, &ball_vector_x, &ball_vector_y, &p1_racket, &p2_racket, &player_1_score, &player_2_score, &restart);
+   
+    
   return 0;
 }
 
+
+
+
+
+
+
+
+
+
+
 /*------------------------------------LOGIC------------------------------------*/
 
-int logic(char command, int *ball_x, int *ball_y, int *ball_vector_x, int *ball_vector_y, int *p1_racket, int *p2_racket, int *player_1_score, int *player_2_score, int *restart) {
-    logic_racket(command, p1_racket, p2_racket);
-    logic_ball(ball_x, ball_y, ball_vector_x, ball_vector_y, p1_racket, p2_racket, player_1_score, player_2_score);
-        
-    return 1;
+
+//функция движения ракетки (ориентир - средняя черта)
+int racket_move(int p1_racket, int p2_racket, char input_char) {
+    //вводим наши буквы и сохраняем в переменную.
+    if ((input_char == 'a') && (p1_racket - 3) != 0) {  //учитываем верхние границы поля
+        p1_racket--;
+        return p1_racket;
+    }
+
+    if ((input_char == 'z') && (p1_racket + 2) != SIZE_Y) {  //учитываем нижние границы
+        p1_racket++;
+        return p1_racket;
+    }
+
+    if ((input_char == 'k') && (p2_racket - 3) != 0) {
+        p2_racket--;
+        return p2_racket;
+    }
+
+    if ((input_char == 'm') && (p2_racket + 2) != SIZE_Y) {
+        p2_racket++;
+        return p2_racket;
+    }
+
+
+    return 0;
 }
 
-int logic_ball(int *ball_x, int *ball_y, int *ball_vector_x, int *ball_vector_y, int *p1_racket, int *p2_racket, int *player_1_score, int *player_2_score) {
-    if(*ball_y == SIZE_Y - 1 || *ball_y == 0)
-        *ball_vector_y = !(*ball_vector_y);
-    if(*ball_x == SIZE_X - 1 && (*ball_y == *p2_racket - 1 || *ball_y == *p2_racket || *ball_y == *p2_racket + 1))
-        *ball_vector_x = !(*ball_vector_x);
-    else if(*ball_x == SIZE_X) {
-        *player_1_score += 1;
-        *ball_x = SIZE_X / 2;
-        *ball_y = SIZE_Y / 2;
-    }
-    if(*ball_x == 1 && (*ball_y == *p1_racket - 1 || *ball_y == *p1_racket || *ball_y == *p1_racket + 1))
-        *ball_vector_x = !(*ball_vector_x);
-    else if(*ball_x == 0) {
-        *player_2_score += 1;
-        *ball_x = SIZE_X / 2;
-        *ball_y = SIZE_Y / 2;
-    }
 
-    if(*ball_vector_x)  *ball_x += 1;
-    else *ball_x -= 1;
-    if(*ball_vector_y)  *ball_y += 1;
-    else *ball_y -= 1;
 
-    return 1;
-}
 
-int logic_racket(char command, int *p1_racket, int *p2_racket) {
-    if(command == 'a' || command == 'A') {
-        *p1_racket -= 1;
-        *p1_racket = *p1_racket <= 1 ? 1 : *p1_racket;
-    }
-    if(command == 'z' || command == 'Z') {
-        *p1_racket += 1;
-        *p1_racket = *p1_racket >= SIZE_Y - 2 ? SIZE_Y - 2 : *p1_racket;
-    }
-    if(command == 'k' || command == 'K') {
-        *p2_racket -= 1;
-        *p2_racket = *p2_racket <= 1 ? 1 : *p2_racket;
-    }
-    if(command == 'm' || command == 'M') {
-        *p2_racket += 1;
-        *p2_racket = *p2_racket >= SIZE_Y - 2 ? SIZE_Y - 2 : *p2_racket;
-    }
-    return 1;
-}
 
-// int *ball_vector_x, int *ball_vector_y
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*------------------------------------DRAW------------------------------------*/
 
@@ -166,69 +251,82 @@ void space() {
 }
 
 int sep_line(int x) {
+
+    int valid = 0;
+
     if(x == SIZE_X / 2) {
         printf("|");
-        return 1;
+        valid = 1;
     }
 
-    return 0;
+    return valid;
 }
 
 int racket(int x, int y, int player, int racket_position) {
+
+    int valid = 0;
+
     racket_position = racket_position <= 1 ? 1 : racket_position;
     racket_position = racket_position >= SIZE_Y - 2 ? SIZE_Y - 2 : racket_position;
     if(!player) {
         if(x == 0 && (y == racket_position || y == racket_position + 1 || y == racket_position - 1)) {
             printf("|");
-            return 1;
+            valid = 1;
         }
         else
-            return 0;
+            valid = 0;
         
     }
     else {
         if(x == SIZE_X - 1 && (y == racket_position || y == racket_position + 1 || y == racket_position - 1)){
              printf("|");
-            return 1;
+            valid = 1;
         }
         else
-            return 0;
+            valid = 0;
     }
     
-    return 0;
+    return valid;
 }
 
 
 int ball(int x, int y, int ball_x, int ball_y) {
+
+    int valid = 0;
+
+
     if(x == ball_x && y == ball_y) {
-        printf("o");
-        return 1;
+        printf("@");
+        valid = 1;
     }
-    return 0;
+    return valid;
 }
 
 int score(int x, int y, int player_1_score, int player_2_score) {
 
+    int valid = 0;
+
     if(y == 0 && x == SIZE_X / 2 - 3 ) {
         printf("%d", player_1_score / 10);
-        return 1;
+        valid = 1;
     }
     if(y == 0 && x == SIZE_X / 2 - 2 ) {
         printf("%d", player_1_score % 10);
-        return 1;
+        valid = 1;
     }
     if(y == 0 && x == SIZE_X / 2 + 3 ) {
         printf("%d", player_2_score % 10);
-        return 1;
+        valid = 1;
     }
     if(y == 0 && x == SIZE_X / 2 + 2 ) {
         printf("%d", player_2_score / 10);
-        return 1;
+        valid = 1;
     }
-    return 0;
+    return valid;
     
 }
 
 void player_win(int player) {
+    for (int i = 0; i < SIZE_X / 2 - 5; i++) printf(" ");
     printf("PLAYER %d WIN\n", player);
 }
