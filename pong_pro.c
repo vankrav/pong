@@ -1,15 +1,14 @@
-#include <math.h>  // Подключение библиотеки математических функций
+#include <ncurses.h>  // Подключение библиотеки для интератива
 #include <stdio.h>  // Подключение стандартной библиотеки ввода-вывода
-#include <ncurses.h>
-
 
 #define SIZE_X 80  // Определение константы размера поля по горизонтали
 #define SIZE_Y 25  // Определение константы размера поля по вертикали
+#define WIN 21
 
 /*-------------ОТРИСОВКА-------------*/
 
-void draw(int ball_x, int ball_y, int p1_racket, int p2_racket, int player_1_score,
-          int player_2_score);  // Прототип функции отрисовки игрового поля
+int draw(int ball_x, int ball_y, int p1_racket, int p2_racket, int player_1_score,
+         int player_2_score);  // Прототип функции отрисовки игрового поля
 
 /*---------ОТРИСОВКА В ПОЛЕ---------*/
 // только 1 printw может выполниться
@@ -23,7 +22,8 @@ void space();         // Функция отрисовки пустого про
 
 /*---------ОТРИСОВКА ВНЕ ПОЛЕ---------*/
 
-void player_win(int player);  // Функция объявления победителя, player {1, 2}
+int player_win(int player_1_score, int player_2_score,
+               int win);  // Функция объявления победителя, player {1, 2}
 
 /*---------ЛОГИКА---------*/
 
@@ -31,11 +31,9 @@ int racket_move(int p1_racket, int p2_racket, char input_char);  // Функци
 
 /*------------------------------------MAIN------------------------------------*/
 
-int main(int argc,char *argv[]) {
+int main() {
     /*------------------------------------------------------------------------*/
     initscr();
-    int row, col;
-    getmaxyx(stdscr, row, col);
     curs_set(0);
     timeout(100);
 
@@ -63,13 +61,12 @@ int main(int argc,char *argv[]) {
     draw(ball_x, ball_y, p1_racket, p2_racket, player_1_score,
          player_2_score);  // Вызов функции отрисовки игрового поля
 
-    while (player_1_score <= 21 && player_2_score <= 21) {  // Основной игровой цикл
-    
+    while (1) {  // Основной игровой цикл
+
         move = getch();
 
-        draw(ball_x, ball_y, p1_racket, p2_racket, player_1_score,
-                    player_2_score);  // Повторный вызов функции отрисовки игрового поля
-
+        if (!draw(ball_x, ball_y, p1_racket, p2_racket, player_1_score, player_2_score))
+            break;  // Повторный вызов функции отрисовки игрового поля
 
         if (move != '\n') {  // Игнорирование нажатия Enter
             int move_res = racket_move(p1_racket, p2_racket,
@@ -90,7 +87,7 @@ int main(int argc,char *argv[]) {
                 p1_racket = SIZE_Y / 2;
                 p2_racket = SIZE_Y / 2;
 
-                ball_x = SIZE_X / 2;//SIZE_X - 1;
+                ball_x = 0;
                 ball_y = SIZE_Y / 2 - 1;
                 // Сброс векторов движения мяча
                 ball_vector_x = 1;
@@ -102,7 +99,7 @@ int main(int argc,char *argv[]) {
                 // Сброс позиций ракеток и мяча
                 p1_racket = SIZE_Y / 2;
                 p2_racket = SIZE_Y / 2;
-                ball_x = SIZE_X / 2;//SIZE_X - 1;
+                ball_x = SIZE_X - 1;
                 ball_y = SIZE_Y / 2 + 1;
                 // Сброс векторов движения мяча
                 ball_vector_x = -1;
@@ -129,14 +126,12 @@ int main(int argc,char *argv[]) {
 
             ball_x += ball_vector_x;  // Обновление позиции мяча по горизонтали
             ball_y += ball_vector_y;  // Обновление позиции мяча по вертикали
-
-            
         }
-        
-       
     }
-
-
+    while (1) {
+        move = getch();
+        if (move == 'q') break;
+    }
 
     return 0;  // Возвращение 0 при успешном завершении программы
 }
@@ -175,20 +170,21 @@ int racket_move(int p1_racket, int p2_racket, char input_char) {
 
 /*------------------------------------DRAW------------------------------------*/
 
-void draw(int ball_x, int ball_y, int p1_racket, int p2_racket, int player_1_score, int player_2_score) {
+int draw(int ball_x, int ball_y, int p1_racket, int p2_racket, int player_1_score, int player_2_score) {
+    int valid = 1;
+
     clear();
-        
-        printw(" Player 1");  // Вывод надписи "Player 1"
-        for (int i = 0; i < SIZE_X - 16; i++) printw(" ");  // Вывод пробелов между надписями игроков
-        printw("Player 2\n"); // Вывод надписи "Player 2"
-        
+
+    printw(" Player 1");                                // Вывод надписи "Player 1"
+    for (int i = 0; i < SIZE_X - 16; i++) printw(" ");  // Вывод пробелов между надписями игроков
+    printw("Player 2\n");                               // Вывод надписи "Player 2"
 
     printw(" ");  // Вывод пробела перед верхней границей поля
-    for (int i = 0; i < SIZE_X; i++) printw("#");  // Вывод верхней границы поля
+    for (int i = 0; i < SIZE_X; i++) printw("-");  // Вывод верхней границы поля
     printw("\n");                                  // Переход на новую строку
 
-    for (int y = 0; y < SIZE_Y; y++) {     
-           // Цикл по вертикали поля
+    for (int y = 0; y < SIZE_Y; y++) {
+        // Цикл по вертикали поля
         printw("|");                          // Вывод левой границы поля
         for (int x = 0; x < SIZE_X; x++) {    // Цикл по горизонтали поля
             if (!ball(x, y, ball_x, ball_y))  // Попытка отрисовки мяча
@@ -201,12 +197,12 @@ void draw(int ball_x, int ball_y, int p1_racket, int p2_racket, int player_1_sco
     }
 
     printw(" ");  // Вывод пробела перед нижней границей поля
-    for (int i = 0; i < SIZE_X; i++) printw("#");  // Вывод нижней границы поля
+    for (int i = 0; i < SIZE_X; i++) printw("-");  // Вывод нижней границы поля
     printw("\n");                                  // Переход на новую строку
 
-    if (player_1_score >= 21) player_win(1);  // Проверка и объявление победы первого игрока
-    if (player_2_score >= 21) player_win(2);  // Проверка и объявление победы второго игрока
-    
+    valid = !player_win(player_1_score, player_2_score, WIN);
+
+    return valid;
 }
 
 void space() {
@@ -257,7 +253,7 @@ int ball(int x, int y, int ball_x, int ball_y) {
     int valid = 0;  // Инициализация переменной валидности
 
     if (x == ball_x && y == ball_y) {  // Проверка на позицию мяча
-        printw("o");                   // Вывод мяча
+        printw("@");                   // Вывод мяча
         valid = 1;                     // Установка валидности в 1
     }
     return valid;  // Возвращение значения валидности
@@ -285,7 +281,19 @@ int score(int x, int y, int player_1_score, int player_2_score) {
     return valid;  // Возвращение значения валидности
 }
 
-void player_win(int player) {  // Функция объявления победителя
-    for (int i = 0; i < SIZE_X / 2 - 5; i++) printw(" ");  // Вывод пробелов перед надписью победителя
-    printw("PLAYER %d WIN\n", player);  // Вывод надписи победителя
+int player_win(int player_1_score, int player_2_score, int win) {  // Функция объявления победителя
+
+    int valid = 0;
+
+    if (player_1_score == win) {
+        for (int i = 0; i < SIZE_X / 2 - 5; i++) printw(" ");  // Вывод пробелов перед надписью победителя
+        printw("PLAYER 1 WIN\n");  // Вывод надписи победителя
+        valid = 1;
+    }
+    if (player_2_score == win) {
+        for (int i = 0; i < SIZE_X / 2 - 5; i++) printw(" ");  // Вывод пробелов перед надписью победителя
+        printw("PLAYER 2 WIN\n");  // Вывод надписи победителя
+        valid = 1;
+    }
+    return valid;
 }
